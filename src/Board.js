@@ -22,48 +22,71 @@ const validate = (board) => {
 };
 class Board extends Component {
   state = {
-    board: [
-      [1, 2, 3, 4],
-      [3, 4, 0, 0],
-      [2, 0, 4, 0],
-      [4, 0, 0, 2],
-    ],
-    initial: [
-      [true, true, true, true],
-      [true, true, false, false],
-      [true, false, true, false],
-      [true, false, false, false],
-    ],
     statusText: "",
+    timer: 0,
+    loading: true,
   };
 
   submit = () => {
     const isValid = validate(this.state.board);
+    if (validate) {
+      clearInterval(this.interval);
+    }
     this.setState({
       statusText: isValid ? "Correct" : "Incorrect",
     });
   };
+  componentDidMount = () => {
+    this.interval = setInterval(() => {
+      this.setState({ timer: this.state.timer + 1 });
+    }, 1000);
+    this.restartBoard();
+  };
+
+  componentWillUnmount = () => {
+    clearInterval(this.interval);
+  };
+  restartBoard = () => {
+    this.setState({ loading: true });
+    fetch("https://us-central1-skooldio-courses.cloudfunctions.net/react_01/random")
+      .then((res) => {
+        return res.json();
+      })
+      .then((jsonResponse) => {
+        this.setState({
+          board: jsonResponse.board,
+          timer: 0,
+          initial: jsonResponse.board.map((row) => row.map((item) => item !== 0)),
+          loading: false,
+        });
+      });
+  };
   render() {
     return (
       <div>
+        <p className="timer">Elapsed Time : {this.state.timer} second</p>
         <div className="board">
-          {this.state.board.map((row, i) =>
-            row.map((number, j) => (
-              <Cell
-                number={number}
-                key={`cell--`}
-                isInitial={this.state.initial[i][j]}
-                onChange={(newNumber) => {
-                  const { board } = this.state;
-                  board[i][j] = newNumber;
-                  this.setState({
-                    board: board,
-                  });
-                }}
-              />
-            ))
-          )}
+          {!this.state.loading &&
+            this.state.board.map((row, i) =>
+              row.map((number, j) => (
+                <Cell
+                  number={number}
+                  key={`cell--${i}-${j}`}
+                  isInitial={this.state.initial[i][j]}
+                  onChange={(newNumber) => {
+                    const { board } = this.state;
+                    board[i][j] = newNumber;
+                    this.setState({
+                      board: board,
+                    });
+                  }}
+                />
+              ))
+            )}
         </div>
+        <button className="restart-button" onClick={this.restartBoard}>
+          Restart
+        </button>
         <button onClick={this.submit}>Submit</button>
         <p>{this.state.statusText}</p>
       </div>
